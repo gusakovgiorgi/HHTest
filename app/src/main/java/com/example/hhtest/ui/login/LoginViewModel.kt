@@ -17,7 +17,6 @@ data class LoginFormState(
     val usernameError: Int? = null,
     val hideKeyBoard: Boolean = false,
     val passwordError: Int? = null,
-    val isDataValid: Boolean = false,
     val showLoading: Boolean = false
 )
 
@@ -41,6 +40,7 @@ class LoginViewModel(private val loginRepository: LoginRepository, private val w
     private val UI = CoroutineScope(Dispatchers.Main)
 
     fun login(username: String, password: String) {
+        if (!validate(username, password)) return
         UI.launch {
             _loginForm.value = LoginFormState(showLoading = true, hideKeyBoard = true)
             val result = loginRepository.loginAsync(username, password).await()
@@ -66,7 +66,7 @@ class LoginViewModel(private val loginRepository: LoginRepository, private val w
         }
     }
 
-    fun enteredLoginData(email: String, password: String): Boolean {
+    private fun validate(email: String, password: String): Boolean {
         if (loginValidator.emailIsNotValid(email)) {
             _loginForm.value = LoginFormState(usernameError = R.string.invalid_username)
             return false
@@ -74,7 +74,6 @@ class LoginViewModel(private val loginRepository: LoginRepository, private val w
             _loginForm.value = LoginFormState(passwordError = R.string.invalid_password)
             return false
         } else {
-            _loginForm.value = LoginFormState(isDataValid = true)
             return true
         }
     }

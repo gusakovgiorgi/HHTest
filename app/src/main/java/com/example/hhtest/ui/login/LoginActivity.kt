@@ -6,25 +6,28 @@ import android.os.Bundle
 import android.support.annotation.StringRes
 import android.support.design.widget.Snackbar
 import android.support.v7.app.AppCompatActivity
-import android.view.Menu
-import android.view.MenuItem
-import android.view.View
-import android.view.WindowManager
+import android.view.*
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
 import com.example.hhtest.R
-import com.example.hhtest.util.afterTextChanged
 import com.example.hhtest.util.hideKeyBoard
+import com.tooltip.Tooltip
 import kotlinx.android.synthetic.main.activity_login.*
 
 class LoginActivity : AppCompatActivity() {
 
     private lateinit var loginViewModel: LoginViewModel
+    private lateinit var passwordToolTip: Tooltip
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_login)
+
+        passwordToolTip = Tooltip.Builder(password)
+            .setText(R.string.invalid_password)
+            .setGravity(Gravity.TOP)
+            .build()
 
         initToolbar()
 
@@ -34,14 +37,11 @@ class LoginActivity : AppCompatActivity() {
         loginViewModel.loginFormState.observe(this@LoginActivity, Observer {
             val uiState = it ?: return@Observer
 
-            // disable login button unless both username / password is valid
-            login.isEnabled = uiState.isDataValid
-
             if (uiState.usernameError != null) {
-                username.error = getString(uiState.usernameError)
+                Toast.makeText(this, uiState.usernameError, Toast.LENGTH_SHORT).show()
             }
             if (uiState.passwordError != null) {
-                password.error = getString(uiState.passwordError)
+                Toast.makeText(this, uiState.passwordError, Toast.LENGTH_SHORT).show()
             }
 
             if (uiState.hideKeyBoard) {
@@ -91,21 +91,25 @@ class LoginActivity : AppCompatActivity() {
 
         })
 
-        username.afterTextChanged {
-            loginViewModel.enteredLoginData(
-                username.text.toString(),
-                password.text.toString()
-            )
-        }
-
         password.apply {
-            afterTextChanged {
-                loginViewModel.enteredLoginData(
-                    username.text.toString(),
-                    password.text.toString()
-                )
-            }
+            setOnTouchListener { v, event ->
+                val DRAWABLE_LEFT = 0;
+                val DRAWABLE_TOP = 1;
+                val DRAWABLE_RIGHT = 2;
+                val DRAWABLE_BOTTOM = 3;
 
+                if (event.getAction() == MotionEvent.ACTION_UP) {
+                    if (event.getRawX() >= (password.getRight() - password.getCompoundDrawables()[DRAWABLE_RIGHT].getBounds().width())) {
+                        passwordToolTip.apply {
+                            if (isShowing) {
+                                dismiss()
+                            } else show()
+                        }
+                        return@setOnTouchListener true
+                    }
+                }
+                return@setOnTouchListener false
+            }
             setOnEditorActionListener { _, actionId, _ ->
                 when (actionId) {
                     EditorInfo.IME_ACTION_DONE ->
@@ -125,16 +129,17 @@ class LoginActivity : AppCompatActivity() {
 
     private fun disableLoading() {
         loading.visibility = View.INVISIBLE
-        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+        username.isEnabled = true
+        password.isEnabled = true
+        login.isEnabled = true
     }
 
     private fun enableLoading() {
         loading.visibility = View.VISIBLE
-        loading.requestFocus()
-        window.setFlags(
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
-            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-        )
+        username.isEnabled = false
+        password.isEnabled = false
+        login.isEnabled = false
+        passwordToolTip.dismiss()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {

@@ -13,6 +13,7 @@
             android:theme="@style/AppTheme">
         <activity
                 android:name=".ui.login.LoginActivity"
+                android:windowSoftInputMode="stateVisible"
                 android:label="@string/autorization">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
